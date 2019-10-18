@@ -1,7 +1,7 @@
 import { Component, createNode, Attributes } from "@alumis/observables/src/JSX";
 createNode;
 import { MDCRipple } from "@material/ripple";
-import { CSS_CLASSES } from './constant';
+import { IconName, Icon } from "../icon";
 
 export class Button extends Component<HTMLAnchorElement | HTMLButtonElement> {
 
@@ -31,13 +31,17 @@ export class Button extends Component<HTMLAnchorElement | HTMLButtonElement> {
         let TagName = attrs && attrs.href ? "a" : "button";
 
         (this.node = <TagName {...attrs}>
-            {!trailingIcon ? addIconClass(icon) : null}
+            {!trailingIcon ? initializeIcon(icon) : null}
             <span class={CSS_CLASSES.LABEL}>{children}</span>
-            {trailingIcon ? addIconClass(trailingIcon) : null}
-        </TagName>).classList.add(CSS_CLASSES.ROOT);
+            {trailingIcon ? initializeIcon(trailingIcon) : null}
+        </TagName> as HTMLAnchorElement | HTMLButtonElement).classList.add(CSS_CLASSES.ROOT);
 
-        function addIconClass(icon: HTMLElement | SVGElement | Component<HTMLElement | SVGElement>) {
-            if (icon instanceof Component)
+        function initializeIcon(icon: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName) {
+            if (typeof icon === "string") {
+                icon = <Icon name={icon} />;
+                (icon as Icon).node.classList.add(CSS_CLASSES.ICON);
+            }
+            else if (icon instanceof Component)
                 icon.node.classList.add(CSS_CLASSES.ICON);
             else if (icon)
                 icon.classList.add(CSS_CLASSES.ICON);
@@ -70,6 +74,16 @@ export interface ButtonAttributes extends Attributes {
     unelevated?: boolean;
     outlined?: boolean;
     dense?: boolean;
-    icon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement>;
-    trailingIcon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement>;
+    icon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
+    trailingIcon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
 }
+
+const CSS_CLASSES = {
+    ROOT: 'mdc-button',
+    ICON: 'mdc-button__icon',
+    LABEL: 'mdc-button__label',
+    DENSE: 'mdc-button--dense',
+    RAISED: 'mdc-button--raised',
+    OUTLINED: 'mdc-button--outlined',
+    UNELEVATED: 'mdc-button--unelevated',
+};
