@@ -1,12 +1,14 @@
-import { Component, createNode, Attributes, generateHTMLElementId, applyAttributes, bindAttribute, appendCleanCallback } from "@alumis/observables/src/JSX";
+import { Component, createNode, Attributes, generateHTMLElementId, appendCleanCallback } from "@alumis/observables/src/JSX";
 createNode;
-import { Observable, isObservable, co } from "@alumis/observables/src/Observable";
+import { Observable, isObservable, co, ComputedObservable, ModifiableObservable, o } from "@alumis/observables/src/Observable";
 import { IconName, Icon } from "../icon";
+import { MDCTextField, MDCTextFieldHelperText } from "@material/textfield";
 
-import { MDCTextField, MDCTextFieldFoundation, MDCTextFieldIconFoundation } from '@material/textfield';
+// CSS
 
-const cssClasses = MDCTextFieldFoundation.cssClasses;
-const iconCssClasses = MDCTextFieldIconFoundation.cssClasses;
+import "@material/textfield/mdc-text-field";
+import "@material/textfield/icon/mdc-text-field-icon";
+import "@material/textfield/helper-text/mdc-text-field-helper-text";
 
 export class TextField extends Component<HTMLDivElement> {
 
@@ -19,6 +21,7 @@ export class TextField extends Component<HTMLDivElement> {
             var disabled = attrs.disabled;
 
             var type = attrs.type;
+            var autocomplete = attrs.autocomplete;
             var fullWidth = attrs.fullWidth;
             var helperText = attrs.helperText;
             var characterCounter = attrs.characterCounter;
@@ -28,9 +31,13 @@ export class TextField extends Component<HTMLDivElement> {
             var textarea = attrs.textarea;
             var trailingIcon = attrs.trailingIcon;
 
+            var value = attrs.value;
+            var invalidFeedback = attrs.invalidFeedback;
+
             delete attrs.disabled;
 
             delete attrs.type;
+            delete attrs.autocomplete;
             delete attrs.fullWidth;
             delete attrs.helperText;
             delete attrs.characterCounter;
@@ -39,6 +46,9 @@ export class TextField extends Component<HTMLDivElement> {
             delete attrs.outlined;
             delete attrs.textarea;
             delete attrs.trailingIcon;
+
+            delete attrs.value;
+            delete attrs.invalidFeedback;
         }
 
         let inputType: string;
@@ -65,7 +75,7 @@ export class TextField extends Component<HTMLDivElement> {
 
         let inputId = generateHTMLElementId();
 
-        let innerNode = <div class={cssClasses.ROOT}>
+        let innerNode = <div class="mdc-text-field">
             {leadingIcon ? initializeIcon(leadingIcon) : null}
             {this.inputElement = <input type={inputType} id={inputId} class="mdc-text-field__input" />}
 
@@ -81,50 +91,118 @@ export class TextField extends Component<HTMLDivElement> {
             {!outlined ? <div class="mdc-line-ripple"></div> : null}
         </div> as HTMLDivElement;
 
+        function initializeIcon(icon: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName) {
+            if (typeof icon === "string") {
+                icon = <Icon name={icon} />;
+                (icon as Icon).node.classList.add("mdc-text-field__icon");
+            }
+            else if (icon instanceof Component)
+                icon.node.classList.add("mdc-text-field__icon");
+            else if (icon)
+                icon.classList.add("mdc-text-field__icon");
+            return icon;
+        }
+
         if (disabled)
             bindDisabled(innerNode, this.inputElement, disabled);
 
         if (outlined)
-            innerNode.classList.add(cssClasses.OUTLINED);
+            innerNode.classList.add("mdc-text-field--outlined");
 
         if (fullWidth)
-            innerNode.classList.add(cssClasses.FULLWIDTH);
+            innerNode.classList.add("mdc-text-field--fullwidth");
 
         if (!label)
-            innerNode.classList.add(cssClasses.NO_LABEL);
+            innerNode.classList.add("mdc-text-field--no-label");
 
         if (leadingIcon)
-            innerNode.classList.add(cssClasses.WITH_LEADING_ICON);
+            innerNode.classList.add("mdc-text-field--with-leading-icon");
 
         if (trailingIcon)
-            innerNode.classList.add(cssClasses.WITH_TRAILING_ICON);
+            innerNode.classList.add("mdc-text-field--with-trailing-icon");
 
-        this.mdcComponent = new MDCTextField(innerNode);
+        if (autocomplete !== false && type) {
+            this.inputElement.autocomplete = type;
+            if (!this.inputElement.id)
+                this.inputElement.id = generateHTMLElementId();
+            if (!this.inputElement.name)
+                this.inputElement.name = type;
+        }
+
+        if (value instanceof ComputedObservable) {
+            appendCleanCallback(this.inputElement, (this.valueAsObservable = value).subscribeInvoke(n => { this.inputElement.value = n !== null && n !== undefined ? n : ""; }).unsubscribeAndRecycle);
+            this.inputElement.readOnly = true;
+        }
+
+        else if (value instanceof ModifiableObservable) {
+            let observableSubscription = (this.valueAsObservable = value).subscribeInvoke(n => { this.inputElement.value = n !== null && n !== undefined ? n : ""; });
+            appendCleanCallback(this.inputElement, observableSubscription.unsubscribeAndRecycle);
+            this.inputElement.addEventListener("input", () => { (this.valueAsObservable as ModifiableObservable<any>).setValueDontNotifyMe(this.inputElement.value, observableSubscription); });
+        }
+
+        else if (typeof value === "function") {
+            let computedObservable = co(value);
+            (this.valueAsObservable = computedObservable).subscribeInvoke(n => { this.inputElement.value = n !== null && n !== undefined ? n : ""; });
+            appendCleanCallback(this.inputElement, computedObservable.dispose);
+            this.inputElement.readOnly = true;
+        }
+
+        else {
+            let observable = o(value) as Observable<string>;
+            let observableSubscription = (this.valueAsObservable = observable).subscribeInvoke(n => { this.inputElement.value = n !== null && n !== undefined ? n : ""; });
+            appendCleanCallback(this.inputElement, observable.dispose);
+            this.inputElement.addEventListener("input", () => { (this.valueAsObservable as ModifiableObservable<any>).setValueDontNotifyMe(this.inputElement.value, observableSubscription); });
+        }
+
+        if (invalidFeedback)
+            this.invalidFeedback = invalidFeedback;
+        else appendCleanCallback(innerNode, (this.invalidFeedback = o(null)).dispose);
 
         this.node = <div {...attrs}>
             {innerNode}
-            {helperText || characterCounter ?
-                <div class="mdc-text-field-helper-line">
-                    {helperText ? <div class="mdc-text-field-helper-text">{helperText}</div> : null}
-                    {characterCounter ? <div class="mdc-text-field-character-counter">{characterCounter}</div> : null }
-                </div> : null}
-        </div>
+            <div class="mdc-text-field-helper-line">
+                <div class="mdc-text-field-helper-text">{() => {
+                    let invalidFeedback = this.invalidFeedback.value;
+                    let result: string;
+                    if (invalidFeedback) {
+                        if (isObservable(invalidFeedback))
+                            result = (invalidFeedback as Observable<string>).value;
+                        else if (typeof invalidFeedback === "function")
+                            result = invalidFeedback();
+                        else result = invalidFeedback as string;
+                    }
+                    else if (helperText) {
+                        if (isObservable(helperText))
+                            result = (helperText as Observable<string>).value;
+                        else if (typeof helperText === "function")
+                            result = helperText();
+                        else result = helperText as string;
+                    }
+                    return result !== null && result !== undefined ? result : "";
+                }}
+                </div>
+                {characterCounter ? <div class="mdc-text-field-character-counter">{characterCounter}</div> : null}
+            </div>
+        </div>;
 
-        function initializeIcon(icon: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName) {
-            if (typeof icon === "string") {
-                icon = <Icon name={icon} />;
-                (icon as Icon).node.classList.add(iconCssClasses.ROOT);
-            }
-            else if (icon instanceof Component)
-                icon.node.classList.add(iconCssClasses.ROOT);
-            else if (icon)
-                icon.classList.add(iconCssClasses.ROOT);
-            return icon;
-        }
+        (this.mdcComponent = new MDCTextField(innerNode)).useNativeValidation = false;
+
+        let mdcTextFieldHelperText = this.mdcComponent["helperText_"] as MDCTextFieldHelperText;
+
+        let subscription = this.invalidFeedback.subscribeInvoke(n => {
+            mdcTextFieldHelperText.foundation.setValidation(!!n);
+            this.mdcComponent.valid = !n;
+        });
+
+        if (invalidFeedback)
+            appendCleanCallback(innerNode, subscription.unsubscribeAndRecycle);
     }
 
     mdcComponent!: MDCTextField;
     inputElement: HTMLInputElement;
+
+    valueAsObservable: Observable<string>;
+    invalidFeedback: Observable<string | Observable<string> | (() => string)>;
 
     dispose() {
         this.mdcComponent.destroy();
@@ -135,14 +213,18 @@ export class TextField extends Component<HTMLDivElement> {
 export interface TextFieldAttributes extends Attributes {
 
     type?: TextFieldType;
+    autocomplete?: boolean;
     fullWidth?: boolean;
-    helperText?: any | Observable<any> | (() => any);
-    characterCounter?: any | Observable<any> | (() => any);
-    label?: any | Observable<any> | (() => any);
+    helperText?: string | Observable<string> | (() => string);
+    characterCounter?: string | Observable<string> | (() => string);
+    label?: string | Observable<string> | (() => string);
     leadingIcon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
     outlined?: boolean;
     textarea?: boolean;
     trailingIcon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
+
+    value?: string | Observable<string> | (() => string);
+    invalidFeedback?: Observable<string | Observable<string> | (() => string)>;
 }
 
 export enum TextFieldType {

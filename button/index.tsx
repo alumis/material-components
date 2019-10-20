@@ -3,6 +3,11 @@ createNode;
 import { MDCRipple } from "@material/ripple";
 import { IconName, Icon } from "../icon";
 
+// CSS
+
+import "@material/ripple/mdc-ripple";
+import "@material/button/mdc-button";
+
 export class Button extends Component<HTMLAnchorElement | HTMLButtonElement> {
 
     constructor(attrs: ButtonAttributes, children: any[]) {
@@ -32,19 +37,19 @@ export class Button extends Component<HTMLAnchorElement | HTMLButtonElement> {
 
         (this.node = <TagName {...attrs}>
             {!trailingIcon ? initializeIcon(icon) : null}
-            <span class={CSS_CLASSES.LABEL}>{children}</span>
+            <span class={"mdc-button__label"}>{children}</span>
             {trailingIcon ? initializeIcon(trailingIcon) : null}
-        </TagName> as HTMLAnchorElement | HTMLButtonElement).classList.add(CSS_CLASSES.ROOT);
+        </TagName> as HTMLAnchorElement | HTMLButtonElement).classList.add("mdc-button");
 
         function initializeIcon(icon: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName) {
             if (typeof icon === "string") {
                 icon = <Icon name={icon} />;
-                (icon as Icon).node.classList.add(CSS_CLASSES.ICON);
+                (icon as Icon).node.classList.add("mdc-button__icon");
             }
             else if (icon instanceof Component)
-                icon.node.classList.add(CSS_CLASSES.ICON);
+                icon.node.classList.add("mdc-button__icon");
             else if (icon)
-                icon.classList.add(CSS_CLASSES.ICON);
+                icon.classList.add("mdc-button__icon");
             return icon;
         }
 
@@ -52,16 +57,16 @@ export class Button extends Component<HTMLAnchorElement | HTMLButtonElement> {
             this.node.type = submits ? "submit" : "button";
 
         if (raised)
-            this.node.classList.add(CSS_CLASSES.RAISED);
+            this.node.classList.add("mdc-button--raised");
 
         if (unelevated)
-            this.node.classList.add(CSS_CLASSES.UNELEVATED);
+            this.node.classList.add("mdc-button--unelevated");
 
         if (outlined)
-            this.node.classList.add(CSS_CLASSES.OUTLINED);
+            this.node.classList.add("mdc-button--outlined");
 
         if (dense)
-            this.node.classList.add(CSS_CLASSES.DENSE);
+            this.node.classList.add("mdc-button--dense");
 
         MDCRipple.attachTo(this.node);
     }
@@ -77,13 +82,3 @@ export interface ButtonAttributes extends Attributes {
     icon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
     trailingIcon?: HTMLElement | SVGElement | Component<HTMLElement | SVGElement> | string | IconName;
 }
-
-const CSS_CLASSES = {
-    ROOT: 'mdc-button',
-    ICON: 'mdc-button__icon',
-    LABEL: 'mdc-button__label',
-    DENSE: 'mdc-button--dense',
-    RAISED: 'mdc-button--raised',
-    OUTLINED: 'mdc-button--outlined',
-    UNELEVATED: 'mdc-button--unelevated',
-};
