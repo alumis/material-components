@@ -1,6 +1,6 @@
 {
   "name": "@alumis/material-components",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Material Components for Alumis (MDC Alumis).",
   "scripts": {
     "bump": "git add -A & git commit -am 'bumped' && npm version patch && npm publish && git push --follow-tags"
